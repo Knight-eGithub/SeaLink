@@ -24,6 +24,14 @@ bool SensorManager::begin() {
     // 2. Initialize Shared I2C Bus (SDA: 21, SCL: 22)
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 
+    Serial.println("[I2C Scan] Probing I2C bus (SDA: 21, SCL: 22)...");
+    for (uint8_t addr = 1; addr < 127; addr++) {
+        Wire.beginTransmission(addr);
+        if (Wire.endTransmission() == 0) {
+            Serial.printf(" -> Detected I2C device at address 0x%02X\n", addr);
+        }
+    }
+
     // 3. Initialize OLED Display (SSD1306)
     if (_display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
         _oledReady = true;
