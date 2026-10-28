@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "sealink_app",
-    "slug": "sealink_app",
+    "name": "SeaLink",
+    "slug": "sealink",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

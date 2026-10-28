@@ -1,65 +1,57 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+  // SeaLink Clean Maritime Sea-Green Palette
+  primary: '#167D6A',       // SeaLink Teal / Sea Green
+  primaryDark: '#0E5C4E',   // Deep Forest Sea Green
+  primaryLight: '#B5E8DC',  // Soft Mint Border / Selection
+  primaryBubble: '#D5F5E9', // User Message Bubble Mint
+  accent: '#E5A34B',        // Nautical Amber / Warning
+  online: '#42B883',        // Emerald Active Dot
+  danger: '#DC2626',        // Alert Red
+
+  background: '#F7F9FA',    // Clean Light Neutral Canvas
+  surface: '#FFFFFF',       // Card / Header Surface
+  surfaceMuted: '#F2F5F6',  // Composer Input / Secondary Surface
+  border: '#E8ECEF',        // Card / Divider Border
+  borderLight: '#E7ECEF',
+
+  text: '#17252D',          // Primary Dark Slate
+  textBody: '#203039',      // Message Body Text
+  textSecondary: '#667780', // Subtle Gray Text
+  textMuted: '#778790',     // Secondary Muted
+  textPlaceholder: '#82919B',
+  textFootnote: '#95A1A7',
+
+  noticeBackground: '#EAF1EF', // Notice / Status Pill Background
+  noticeText: '#536A64',
+
+  // Delivery State Colors
+  delivery: {
+    queued_local: '#7D8C93',
+    accepted_by_gateway: '#168A71',
+    transmitted_to_next_hop: '#E5A34B',
+    delivered_to_destination_gateway: '#347F78',
+    delivered_to_recipient: '#168A71',
+    failed: '#DC2626',
+    expired: '#94A3B8',
   },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+
+  // Contact Avatar Palettes
+  contacts: [
+    { id: 'BOAT-104', color: '#347F78' },
+    { id: 'BOAT-207', color: '#5679A6' },
+    { id: 'BOAT-315', color: '#8C6CA8' },
+    { id: 'BOAT-421', color: '#A77A48' },
+    { id: 'BOAT-BRAVO', color: '#347F78' },
+    { id: 'BOAT-CHARLIE', color: '#5679A6' },
+    { id: 'BOAT-DELTA', color: '#8C6CA8' },
+  ],
 } as const;
-
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
 
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 28,
 } as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;

@@ -1,18 +1,71 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-SplashScreen.preventAutoHideAsync();
+export default function RootLayout() {
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          headerTintColor: '#167D6A',
+          headerTitleStyle: {
+            fontWeight: '800',
+            fontSize: 17,
+            color: '#17252D',
+          },
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: '#F7F9FA',
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            headerShown: false, // The home screen implements its custom branded header
+          }}
+        />
+        <Stack.Screen
+          name="connect"
+          options={{
+            title: 'ESP32 LoRa Gateway',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="boats"
+          options={{
+            title: 'Fleet Directory',
+            headerBackTitle: 'Chats',
+          }}
+        />
+        <Stack.Screen
+          name="chat/[boatId]"
+          options={{
+            title: 'Boat Chat',
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            title: 'Vessel Identity',
+            headerBackTitle: 'Back',
+          }}
+        />
+      </Stack>
+    </SafeAreaProvider>
   );
 }
