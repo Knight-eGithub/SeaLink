@@ -39,15 +39,15 @@ bool SensorManager::begin() {
         Serial.println(" -> [WARN] OLED Display (SSD1306) not found on I2C bus.");
     }
 
-    // 4. Initialize MPU6050 Accelerometer / Gyroscope
-    if (_mpu.begin(0x68, &Wire)) {
+    // 4. Initialize MPU6050 Accelerometer / Gyroscope (Try standard 0x68, then alternate 0x69)
+    if (_mpu.begin(0x68, &Wire) || _mpu.begin(0x69, &Wire)) {
         _mpuReady = true;
         _mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
         _mpu.setGyroRange(MPU6050_RANGE_500_DEG);
         _mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
         Serial.println(" -> MPU6050 Motion Sensor: Online (Range +/-8G)");
     } else {
-        Serial.println(" -> [WARN] MPU6050 Accelerometer not detected on I2C 0x68.");
+        Serial.println(" -> [WARN] MPU6050 Accelerometer not detected on I2C (checked 0x68 and 0x69).");
     }
 
     // 5. Initialize Hardware GPS Serial 2 (GPIO16 RX, GPIO17 TX)
