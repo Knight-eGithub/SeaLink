@@ -15,20 +15,51 @@ bool RadioDriver::begin() {
     digitalWrite(LORA_RST, HIGH);
     delay(50); // Allow PLL and internal oscillators to stabilize
 
-    // 3. Diagnostic check: Read RegVersion (0x42) directly
+    // 3. Electrical continuity test on MISO (GPIO 19)
+    pinMode(LORA_MISO, INPUT_PULLDOWN);
+    delay(2);
+    int misoLow = digitalRead(LORA_MISO);
+    pinMode(LORA_MISO, INPUT_PULLUP);
+    delay(2);
+    int misoHigh = digitalRead(LORA_MISO);
+
+    Serial.printf("[LoRa Diagnostic] MISO pin (GPIO 19) line test: Pulldown=%d, Pullup=%d\n", misoLow, misoHigh);
+    if (misoLow == 0 && misoHigh == 1) {
+        Serial.println(" -> [DIAGNOSTIC] MISO (GPIO 19) is FLOATING! The jumper wire is loose or not reaching the RA-02 MISO pin.");
+    } else if (misoLow == 0 && misoHigh == 0) {
+        Serial.println(" -> [DIAGNOSTIC] MISO (GPIO 19) is held LOW (0V). The RA-02 may have no 3.3V power, or MISO is shorted to GND.");
+    }
+
+    // 4. Diagnostic check: Read RegVersion (0x42) on GPIO 5
     digitalWrite(LORA_SS, LOW);
     SPI.transfer(0x42 & 0x7F); // Read bit (MSB 0)
     uint8_t version = SPI.transfer(0x00);
     digitalWrite(LORA_SS, HIGH);
 
-    Serial.printf("[LoRa Diagnostic] SPI RegVersion read: 0x%02X (Expected: 0x12)\n", version);
-    if (version == 0x00) {
-        Serial.println(" -> [DIAGNOSTIC] 0x00 returned. SX1278 has NO POWER (check 3.3V/GND) or NSS (GPIO 5) / SCK (GPIO 18) is disconnected.");
-    } else if (version == 0xFF) {
-        Serial.println(" -> [DIAGNOSTIC] 0xFF returned. MISO (GPIO 19) is floating/disconnected, or MOSI (GPIO 23) is swapped.");
+    Serial.printf("[LoRa Diagnostic] SPI RegVersion read on GPIO 5: 0x%02X (Expected: 0x12)\n", version);
+
+    // 5. If not found on GPIO 5, probe alternate CS pins (15, 4, 2)
+    uint8_t workingCs = LORA_SS;
+    if (version != 0x12) {
+        const uint8_t altCs[] = { 15, 4, 2, 27 };
+        for (uint8_t cs : altCs) {
+            pinMode(cs, OUTPUT);
+            digitalWrite(cs, HIGH);
+            delay(2);
+            digitalWrite(cs, LOW);
+            SPI.transfer(0x42 & 0x7F);
+            uint8_t altV = SPI.transfer(0x00);
+            digitalWrite(cs, HIGH);
+            if (altV == 0x12) {
+                Serial.printf(" -> [FOUND!] SX1278 responded on Chip Select GPIO %u!\n", cs);
+                workingCs = cs;
+                version = 0x12;
+                break;
+            }
+        }
     }
 
-    LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+    LoRa.setPins(workingCs, LORA_RST, LORA_DIO0);
 
     if (!LoRa.begin(LORA_FREQ)) {
         Serial.println("[LoRa] Radio initialization FAILED!");
