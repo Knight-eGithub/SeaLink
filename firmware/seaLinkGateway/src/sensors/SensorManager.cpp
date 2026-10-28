@@ -47,15 +47,17 @@ bool SensorManager::begin() {
         Serial.println(" -> [WARN] OLED Display (SSD1306) not found on I2C bus.");
     }
 
-    // 4. Initialize MPU6050 Accelerometer / Gyroscope (Try standard 0x68, then alternate 0x69)
-    if (_mpu.begin(0x68, &Wire) || _mpu.begin(0x69, &Wire)) {
+    // 4. Initialize MPU6050 / GY-521 Motion Sensor (Direct I2C Wakeup & Reading)
+    Wire.beginTransmission(0x68);
+    Wire.write(0x6B); // PWR_MGMT_1 register
+    Wire.write(0x00); // Clear sleep bit (0 = Wake up!)
+    uint8_t mpuErr = Wire.endTransmission();
+
+    if (mpuErr == 0) {
         _mpuReady = true;
-        _mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-        _mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-        _mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-        Serial.println(" -> MPU6050 Motion Sensor: Online (Range +/-8G)");
+        Serial.println(" -> MPU6050 Motion Sensor: Online at 0x68 (Direct I2C Handshake OK)");
     } else {
-        Serial.println(" -> [WARN] MPU6050 Accelerometer not detected on I2C (checked 0x68 and 0x69).");
+        Serial.printf(" -> [WARN] MPU6050 I2C handshake failed (error code: %u)\n", mpuErr);
     }
 
     // 5. Initialize Hardware GPS Serial 2 (GPIO16 RX, GPIO17 TX)
@@ -96,30 +98,32 @@ void SensorManager::update() {
             _gpsData.hasFix = false;
         }
 
-        // C. Read MPU6050 Accelerometer / Gyroscope
+        // C. Read MPU6050 Accelerometer / Gyroscope (Direct I2C Registers 0x3B-0x40)
         if (_mpuReady) {
-            sensors_event_t a, g, temp;
-            _mpu.getEvent(&a, &g, &temp);
+            Wire.beginTransmission(0x68);
+            Wire.write(0x3B); // ACCEL_XOUT_H
+            if (Wire.endTransmission(false) == 0 && Wire.requestFrom((uint8_t)0x68, (uint8_t)6) == 6) {
+                int16_t rawAx = (Wire.read() << 8) | Wire.read();
+                int16_t rawAy = (Wire.read() << 8) | Wire.read();
+                int16_t rawAz = (Wire.read() << 8) | Wire.read();
 
-            // Calculate pitch and roll angles in degrees
-            // pitch = angle of inclination forward/backward
-            // roll = angle of list port/starboard
-            float ax = a.acceleration.x;
-            float ay = a.acceleration.y;
-            float az = a.acceleration.z;
+                // Sensitivity scale factor for +/- 2g is 16384 LSB/g
+                float ax = (float)rawAx / 16384.0f;
+                float ay = (float)rawAy / 16384.0f;
+                float az = (float)rawAz / 16384.0f;
 
-            _motionData.pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
-            _motionData.roll = atan2(ay, az) * 180.0 / PI;
+                _motionData.pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0f / PI;
+                _motionData.roll = atan2(ay, az) * 180.0f / PI;
 
-            // Total acceleration magnitude in G's (normal is ~1.0G gravity)
-            float totalAccel = sqrt(ax * ax + ay * ay + az * az) / 9.80665f;
-            _motionData.totalAccelG = totalAccel;
+                float totalAccel = sqrt(ax * ax + ay * ay + az * az);
+                _motionData.totalAccelG = totalAccel;
 
-            // Maritime Capsizing Threshold: continuous roll > 40 deg or pitch > 35 deg
-            _motionData.capsizingAlert = (fabs(_motionData.roll) > 40.0f || fabs(_motionData.pitch) > 35.0f);
+                // Maritime Capsizing Threshold: continuous roll > 40 deg or pitch > 35 deg
+                _motionData.capsizingAlert = (fabs(_motionData.roll) > 40.0f || fabs(_motionData.pitch) > 35.0f);
 
-            // Impact / Collision Alert: sudden acceleration shock > 2.8G
-            _motionData.impactAlert = (totalAccel > 2.8f);
+                // Impact / Collision Alert: sudden acceleration shock > 2.8G
+                _motionData.impactAlert = (totalAccel > 2.8f);
+            }
         }
     }
 }
