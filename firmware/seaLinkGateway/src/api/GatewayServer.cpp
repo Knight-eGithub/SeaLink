@@ -188,9 +188,21 @@ void GatewayServer::setupRoutes() {
     });
 
     // POST /api/v1/messages
-    AsyncCallbackJsonWebHandler* sendHandler = new AsyncCallbackJsonWebHandler("/api/v1/messages",
-        [this](AsyncWebServerRequest* request, JsonVariant& json) {
-            JsonObject jsonObj = json.as<JsonObject>();
+    _server.on(
+        "/api/v1/messages",
+        HTTP_POST,
+        [](AsyncWebServerRequest* request) {
+            // Handled in onBody handler below
+        },
+        NULL,
+        [this](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+            JsonDocument jsonObj;
+            DeserializationError err = deserializeJson(jsonObj, data, len);
+            if (err) {
+                request->send(400, "application/json", "{\"error\":\"Invalid JSON format\"}");
+                return;
+            }
+
             if (!jsonObj["destinationBoatId"] || !jsonObj["text"] || !jsonObj["id"]) {
                 request->send(400, "application/json", "{\"error\":\"Missing required packet fields (id, destinationBoatId, text)\"}");
                 return;
@@ -259,8 +271,8 @@ void GatewayServer::setupRoutes() {
             } else {
                 request->send(503, "application/json", "{\"error\":\"Gateway transmission queue is full\"}");
             }
-        });
-    _server.addHandler(sendHandler);
+        }
+    );
 
     // GET /api/v1/messages?cursor=<cursor>
     _server.on("/api/v1/messages", HTTP_GET, [this](AsyncWebServerRequest* request) {
