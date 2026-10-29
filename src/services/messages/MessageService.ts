@@ -132,6 +132,18 @@ export class MessageService {
       this.isConnected = true;
       this.lastGatewayStatus = status;
 
+      // Automatically align local crew identity with whichever vessel gateway we connected to
+      if (status.boatId && status.boatId !== 'UNKNOWN') {
+        const currentIdentity = await this.repository.getIdentity();
+        if (currentIdentity.boatId !== status.boatId) {
+          await this.repository.saveIdentity({
+            ...currentIdentity,
+            boatId: status.boatId,
+            boatName: status.boatName || `Vessel ${status.boatId}`,
+          });
+        }
+      }
+
       // Dynamically discover all boats and multi-hop mesh routes reported by gateway radio
       if (status.knownRoutes && status.knownRoutes.length > 0) {
         await this.syncMeshRoutes(status.knownRoutes);

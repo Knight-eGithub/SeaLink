@@ -146,7 +146,29 @@ export class GatewayClient {
       };
     }
 
-    return this.request<GatewayStatus>('/api/v1/status');
+    try {
+      return await this.request<GatewayStatus>('/api/v1/status');
+    } catch (primaryErr) {
+      // If primary IP fails (e.g. phone switched between SeaLink-BOAT-001 [192.168.4.1] and SeaLink-BOAT-104 [192.168.5.1])
+      const candidateHosts = ['192.168.4.1', '192.168.5.1', '192.168.6.1'].filter((h) => h !== this.config.host);
+      for (const altHost of candidateHosts) {
+        try {
+          const altUrl = `http://${altHost}/api/v1/status`;
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 1200);
+          const res = await fetch(altUrl, { signal: ctrl.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            const data = await res.json();
+            this.config.host = altHost;
+            return data as GatewayStatus;
+          }
+        } catch {
+          // Probe next
+        }
+      }
+      throw primaryErr;
+    }
   }
 
   /**

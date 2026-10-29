@@ -52,6 +52,12 @@ export default function ChatScreen() {
   useEffect(() => {
     loadData();
 
+    // Trigger an immediate sync and poll every 2.5s while chat room is open
+    messageService.syncGateway();
+    const pollTimer = setInterval(() => {
+      messageService.syncGateway();
+    }, 2500);
+
     const unsub = messageService.subscribeMessages((updated) => {
       if (!boatId) return;
       const filtered = updated.filter(
@@ -60,7 +66,10 @@ export default function ChatScreen() {
       setMessages(filtered);
     });
 
-    return unsub;
+    return () => {
+      clearInterval(pollTimer);
+      unsub();
+    };
   }, [boatId, loadData]);
 
   const handleSend = async (text: string) => {
