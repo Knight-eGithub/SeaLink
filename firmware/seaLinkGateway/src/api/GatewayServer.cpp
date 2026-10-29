@@ -294,7 +294,7 @@ void GatewayServer::setupRoutes() {
                 JsonDocument resp;
                 resp["success"] = true;
                 resp["messageId"] = pkt.messageId;
-                resp["status"] = isLocalCrewMessage ? "delivered_onboard" : "accepted_by_gateway";
+                resp["status"] = isLocalSelfOnly ? "delivered_onboard" : "accepted_by_gateway";
                 resp["queuePosition"] = _txCount;
 
                 if (isSos) {
