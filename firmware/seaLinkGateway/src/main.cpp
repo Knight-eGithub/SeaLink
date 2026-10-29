@@ -6,12 +6,14 @@
 #include "config/CloudConfig.h"
 #include "sensors/SensorManager.h"
 
-// Set to true on the ESP32 acting as the Coastal Shore Station (Cloud Bridge)
-// Set to false on ESP32s deployed on boats
+// Predefined via platformio.ini build_flags (-e boat1, -e boat2, -e shore)
+#ifndef IS_SHORE_GATEWAY
 #define IS_SHORE_GATEWAY false
+#endif
 
-// Set Vessel ID (e.g. "BOAT-001" for Vessel 1, "BOAT-104" for Vessel 2)
+#ifndef THIS_BOAT_ID
 #define THIS_BOAT_ID "BOAT-001"
+#endif
 
 RadioDriver radio;
 RouteTable routes;
@@ -75,7 +77,7 @@ void loop() {
     gateway.loop();
 
     sensors.updateOled(
-        IS_SHORE_GATEWAY ? "SHORE-BASE" : "BOAT-001",
+        IS_SHORE_GATEWAY ? "SHORE-BASE" : THIS_BOAT_ID,
         radio.isReady() ? "OK" : "ERR",
         gateway.getPacketsSent(),
         gateway.getPacketsReceived()

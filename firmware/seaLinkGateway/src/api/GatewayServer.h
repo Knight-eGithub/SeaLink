@@ -56,6 +56,7 @@ private:
     uint32_t _packetsSent;
     uint32_t _packetsReceived;
     uint32_t _sosAlertsLogged;
+    uint32_t _lastBeaconTime;
 
     void setupRoutes();
     bool enqueueTxPacket(const PacketEnvelope& packet);

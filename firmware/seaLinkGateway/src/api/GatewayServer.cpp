@@ -17,6 +17,7 @@ GatewayServer::GatewayServer(RadioDriver& radio, RouteTable& routes, const char*
       _packetsSent(0),
       _packetsReceived(0),
       _sosAlertsLogged(0),
+      _lastBeaconTime(0),
       _sensors(nullptr) {
     strncpy(_boatId, boatId, sizeof(_boatId));
     strncpy(_boatName, "SeaLink Vessel", sizeof(_boatName));
@@ -48,6 +49,13 @@ void GatewayServer::setShoreStationMode(bool isShore,
 }
 
 void GatewayServer::begin(const char* customSsid, const char* apPassword) {
+    // If AUTO mode is requested, derive unique Vessel ID from ESP32 hardware MAC:
+    if (strcmp(_boatId, "AUTO") == 0 || strlen(_boatId) == 0) {
+        uint8_t mac[6];
+        WiFi.macAddress(mac);
+        snprintf(_boatId, sizeof(_boatId), "BOAT-%02X%02X", mac[4], mac[5]);
+    }
+
     char finalSsid[32];
     if (customSsid && strlen(customSsid) > 0) {
         strncpy(finalSsid, customSsid, sizeof(finalSsid));
@@ -59,11 +67,17 @@ void GatewayServer::begin(const char* customSsid, const char* apPassword) {
     // - BOAT-001   -> 192.168.4.1 (Subnet 4)
     // - BOAT-104   -> 192.168.5.1 (Subnet 5)
     // - SHORE-BASE -> 192.168.6.1 (Subnet 6)
+    // - AUTO       -> 192.168.(4 + hash).1
     uint8_t subnet = 4;
     if (strstr(_boatId, "104") || strstr(_boatId, "02") || strstr(_boatId, "207") || strstr(_boatId, "BRAVO")) {
         subnet = 5;
     } else if (_isShoreNode || strstr(_boatId, "SHORE")) {
         subnet = 6;
+    } else if (strncmp(_boatId, "BOAT-", 5) == 0 && strcmp(_boatId, "BOAT-001") != 0) {
+        // Any auto-generated or distinct boat ID gets an automatic separate subnet
+        uint8_t hash = 0;
+        for (size_t i = 0; i < strlen(_boatId); i++) hash += (uint8_t)_boatId[i];
+        subnet = 5 + (hash % 5); // Subnets 5, 6, 7, 8, 9
     }
 
     WiFi.mode(WIFI_AP_STA); // AP for crew phones, STA for Shore Station internet uplink
@@ -483,6 +497,13 @@ void GatewayServer::loop() {
             return;
         }
 
+        // 2B. Automatic LoRa Mesh Discovery Beacon (Discovers adjacent vessels silently)
+        if (rxPkt.packetType == PKT_BEACON) {
+            Serial.printf("[Mesh Discovery] Discovered nearby vessel %s over 433 MHz LoRa! (RSSI: %d dBm, SNR: %.1f dB)\n",
+                          rxPkt.sourceBoatId, rxPkt.rssi, rxPkt.snr);
+            return; // Route table was updated, no need to alert crew chat
+        }
+
         // Standard unicast routing
         if (strcmp(rxPkt.destinationBoatId, _boatId) == 0 || strcmp(rxPkt.destinationBoatId, "*") == 0) {
             enqueueIncomingPacket(rxPkt);
@@ -494,5 +515,27 @@ void GatewayServer::loop() {
                               rxPkt.messageId, rxPkt.destinationBoatId, rxPkt.hopCount, rxPkt.hopLimit);
             }
         }
+    }
+
+    // 3. Periodic LoRa Mesh Presence Beacon (every 20s) so nearby vessels automatically discover each other
+    uint32_t now = millis();
+    if (now - _lastBeaconTime > 20000 && _radio.isReady() && _txCount == 0) {
+        _lastBeaconTime = now;
+        PacketEnvelope beacon;
+        memset(&beacon, 0, sizeof(PacketEnvelope));
+        beacon.packetType = PKT_BEACON;
+        snprintf(beacon.messageId, sizeof(beacon.messageId), "bcn-%s-%lu", _boatId, (unsigned long)(now / 1000));
+        strncpy(beacon.sourceBoatId, _boatId, sizeof(beacon.sourceBoatId));
+        strncpy(beacon.destinationBoatId, "ALL", sizeof(beacon.destinationBoatId));
+        beacon.hopCount = 1;
+        beacon.hopLimit = 1;
+        strncpy(beacon.senderName, _boatName, sizeof(beacon.senderName));
+        strncpy(beacon.payload, "MESH_BEACON", sizeof(beacon.payload));
+        beacon.payloadLength = strlen(beacon.payload);
+        if (_sensors) {
+            beacon.latitude = _sensors->getGpsLatitude();
+            beacon.longitude = _sensors->getGpsLongitude();
+        }
+        enqueueTxPacket(beacon);
     }
 }
