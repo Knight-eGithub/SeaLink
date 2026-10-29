@@ -27,12 +27,16 @@ void setup() {
     Serial.println("==============================================");
 
     // 1. Initialize Onboard Hardware Sensors (GPS, MQ-135 Gas, MPU6050, OLED)
+    Serial.println("[Setup Step 1/3] Initializing Onboard Hardware Sensors...");
     sensors.begin();
     gateway.setSensors(&sensors);
 
     // 2. Initialize proven SX1278 SPI LoRa radio
+    Serial.println("[Setup Step 2/3] Initializing SX1278 LoRa Transceiver...");
     if (!radio.begin()) {
-        Serial.println("[CRITICAL] LoRa radio initialization failed! Check wiring (SS=5, RST=14, DIO0=26, SCK=18, MISO=19, MOSI=23).");
+        Serial.println("[CRITICAL] LoRa radio offline! Continuing to Wi-Fi SoftAP...");
+    } else {
+        Serial.println("[LoRa OK] SX1278 radio ready for RF mesh communication.");
     }
 
     // 2. Configure Shore Mode and connect to Internet Wi-Fi (if Shore Node)
@@ -59,6 +63,7 @@ void setup() {
     }
 
     // 3. Start local SoftAP for crew or base operator phones (SSID and IP auto-derived from boat ID)
+    Serial.println("[Setup Step 3/3] Launching Local Wi-Fi Access Point and Web Server...");
     gateway.begin(nullptr, "maritime123");
 
     Serial.printf("[READY] %s listening for 433 MHz LoRa radio traffic.\n",
