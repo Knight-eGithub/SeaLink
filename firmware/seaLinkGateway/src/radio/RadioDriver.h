@@ -10,7 +10,7 @@
 #define LORA_SCK  18
 #define LORA_MISO 19
 #define LORA_MOSI 23
-#define LORA_FREQ 433E6
+#define LORA_FREQ 433000000L
 
 class RadioDriver {
 public:

@@ -59,7 +59,9 @@ bool RadioDriver::begin() {
         }
     }
 
+    LoRa.setSPI(SPI);
     LoRa.setPins(workingCs, LORA_RST, LORA_DIO0);
+    LoRa.setSPIFrequency(2000000);
 
     if (!LoRa.begin(LORA_FREQ)) {
         Serial.println("[LoRa] Radio initialization FAILED!");
@@ -69,7 +71,7 @@ bool RadioDriver::begin() {
 
     // High spreading factor for maritime long-range resilience
     LoRa.setSpreadingFactor(9);
-    LoRa.setSignalBandwidth(125E3);
+    LoRa.setSignalBandwidth(125000L);
     LoRa.setCodingRate4(7);
     LoRa.enableCrc();
 
