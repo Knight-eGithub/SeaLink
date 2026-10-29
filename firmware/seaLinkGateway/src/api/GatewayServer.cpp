@@ -533,8 +533,8 @@ void GatewayServer::loop() {
         strncpy(beacon.payload, "MESH_BEACON", sizeof(beacon.payload));
         beacon.payloadLength = strlen(beacon.payload);
         if (_sensors) {
-            beacon.latitude = _sensors->getGpsLatitude();
-            beacon.longitude = _sensors->getGpsLongitude();
+            beacon.latitude = (float)_sensors->getGps().latitude;
+            beacon.longitude = (float)_sensors->getGps().longitude;
         }
         enqueueTxPacket(beacon);
     }
