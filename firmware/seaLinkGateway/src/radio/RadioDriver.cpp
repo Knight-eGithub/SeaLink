@@ -114,6 +114,7 @@ bool RadioDriver::begin() {
     }
 
     Serial.println("[LoRa] SX1278 initialized on 433 MHz (SF: 9, BW: 125 kHz, CR: 4/7, CRC: ON).");
+    LoRa.receive(); // Put radio into continuous listening RX mode!
     _initialized = true;
     return true;
 }
@@ -130,6 +131,9 @@ bool RadioDriver::transmitPacket(const PacketEnvelope& packet) {
     LoRa.beginPacket();
     LoRa.write(buffer, len);
     int res = LoRa.endPacket();
+
+    // Immediately return SX1278 to continuous RX listening mode after transmit
+    LoRa.receive();
 
     if (res == 1) {
         _txCount++;
@@ -154,6 +158,9 @@ bool RadioDriver::receivePacket(PacketEnvelope& packet) {
     while (LoRa.available() && bytesRead < MAX_PACKET_SIZE) {
         buffer[bytesRead++] = (uint8_t)LoRa.read();
     }
+
+    // Keep radio listening for the next incoming packet
+    LoRa.receive();
 
     if (PacketEnvelope::deserialize(buffer, bytesRead, packet)) {
         packet.rssi = LoRa.packetRssi();

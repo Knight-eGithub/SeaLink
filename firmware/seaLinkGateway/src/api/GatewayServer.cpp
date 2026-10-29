@@ -278,15 +278,15 @@ void GatewayServer::setupRoutes() {
             strncpy(pkt.payload, text, sizeof(pkt.payload));
             pkt.payloadLength = textLen;
 
-            bool isLocalCrewMessage = (strcmp(pkt.destinationBoatId, _boatId) == 0 ||
-                                       strcmp(pkt.destinationBoatId, "ONBOARD-CREW") == 0);
+            // Always transmit onto 433 MHz LoRa RF unless it's strictly addressed to our own node ID
+            bool isLocalSelfOnly = (strcmp(pkt.destinationBoatId, _boatId) == 0);
 
-            // 1. Enqueue for local delivery to other crew devices on this same boat over Wi-Fi
+            // 1. Enqueue for local delivery to phones connected to this gateway
             enqueueIncomingPacket(pkt);
 
-            // 2. Transmit over 433 MHz LoRa if targeted outside or SOS broadcast
+            // 2. Transmit over 433 MHz LoRa RF to other vessels
             bool txQueued = true;
-            if (!isLocalCrewMessage || isSos) {
+            if (!isLocalSelfOnly || isSos) {
                 txQueued = enqueueTxPacket(pkt);
             }
 
@@ -504,8 +504,13 @@ void GatewayServer::loop() {
             return; // Route table was updated, no need to alert crew chat
         }
 
-        // Standard unicast routing
-        if (strcmp(rxPkt.destinationBoatId, _boatId) == 0 || strcmp(rxPkt.destinationBoatId, "*") == 0) {
+        // Deliver to crew phones if addressed to us, broadcast to ALL, or general crew channel
+        bool addressedToUs = (strcmp(rxPkt.destinationBoatId, _boatId) == 0 ||
+                              strcmp(rxPkt.destinationBoatId, "ALL") == 0 ||
+                              strcmp(rxPkt.destinationBoatId, "*") == 0 ||
+                              strcmp(rxPkt.destinationBoatId, "ONBOARD-CREW") == 0);
+
+        if (addressedToUs) {
             enqueueIncomingPacket(rxPkt);
         } else {
             if (rxPkt.hopCount < rxPkt.hopLimit) {
