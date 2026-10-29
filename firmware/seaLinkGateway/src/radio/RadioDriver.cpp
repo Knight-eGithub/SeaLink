@@ -95,6 +95,7 @@ bool RadioDriver::transmitPacket(const PacketEnvelope& packet) {
         _txCount++;
         Serial.printf("[LoRa TX] Sent pkt %s to %s (len: %u bytes)\n",
                       packet.messageId, packet.destinationBoatId, len);
+        Serial.printf("          Payload: \"%s\" (Sender: %s)\n", packet.payload, packet.senderName);
         return true;
     } else {
         Serial.printf("[LoRa TX ERROR] Failed to send pkt %s\n", packet.messageId);
@@ -118,8 +119,14 @@ bool RadioDriver::receivePacket(PacketEnvelope& packet) {
         packet.rssi = LoRa.packetRssi();
         packet.snr  = LoRa.packetSnr();
         _rxCount++;
-        Serial.printf("[LoRa RX] Received pkt %s from %s (RSSI: %d, SNR: %.1f)\n",
-                      packet.messageId, packet.sourceBoatId, packet.rssi, packet.snr);
+        Serial.printf("\n================ [LoRa INCOMING PACKET] ================\n");
+        Serial.printf(" From Vessel : %s (Sender: %s)\n", packet.sourceBoatId, packet.senderName);
+        Serial.printf(" To Vessel   : %s (Type: %s, Hop: %u/%u)\n",
+                      packet.destinationBoatId, packet.isSos ? "🚨 SOS EMERGENCY" : "STANDARD CHAT",
+                      packet.hopCount, packet.hopLimit);
+        Serial.printf(" Radio Stats : RSSI: %d dBm, SNR: %.1f dB\n", packet.rssi, packet.snr);
+        Serial.printf(" Message Text: \"%s\"\n", packet.payload);
+        Serial.printf("========================================================\n\n");
         return true;
     }
 
