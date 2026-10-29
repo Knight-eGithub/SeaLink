@@ -47,12 +47,35 @@ void GatewayServer::setShoreStationMode(bool isShore,
     }
 }
 
-void GatewayServer::begin(const char* apSsid, const char* apPassword) {
+void GatewayServer::begin(const char* customSsid, const char* apPassword) {
+    char finalSsid[32];
+    if (customSsid && strlen(customSsid) > 0) {
+        strncpy(finalSsid, customSsid, sizeof(finalSsid));
+    } else {
+        snprintf(finalSsid, sizeof(finalSsid), "SeaLink-%s", _boatId);
+    }
+
+    // Assign distinct IP subnet per vessel to eliminate multi-device IP clashes on your desk:
+    // - BOAT-001   -> 192.168.4.1 (Subnet 4)
+    // - BOAT-104   -> 192.168.5.1 (Subnet 5)
+    // - SHORE-BASE -> 192.168.6.1 (Subnet 6)
+    uint8_t subnet = 4;
+    if (strstr(_boatId, "104") || strstr(_boatId, "02") || strstr(_boatId, "207") || strstr(_boatId, "BRAVO")) {
+        subnet = 5;
+    } else if (_isShoreNode || strstr(_boatId, "SHORE")) {
+        subnet = 6;
+    }
+
     WiFi.mode(WIFI_AP_STA); // AP for crew phones, STA for Shore Station internet uplink
-    WiFi.softAP(apSsid, apPassword, 1, 0, 8); // Support up to 8 simultaneous crew devices on board
+    IPAddress local_IP(192, 168, subnet, 1);
+    IPAddress gateway(192, 168, subnet, 1);
+    IPAddress subnet_mask(255, 255, 255, 0);
+    WiFi.softAPConfig(local_IP, gateway, subnet_mask);
+    WiFi.softAP(finalSsid, apPassword, 1, 0, 8); // Support up to 8 simultaneous crew devices on board
 
     IPAddress ip = WiFi.softAPIP();
-    Serial.printf("[Wi-Fi AP] Started SSID: '%s', IP: %s\n", apSsid, ip.toString().c_str());
+    Serial.printf("[Wi-Fi AP] Started SSID: '%s', IP: %s (Subnet: 192.168.%u.x)\n",
+                  finalSsid, ip.toString().c_str(), subnet);
 
     setupRoutes();
     _server.begin();

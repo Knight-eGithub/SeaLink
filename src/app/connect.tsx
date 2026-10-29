@@ -35,14 +35,15 @@ export default function ConnectGatewayScreen() {
     testConnection();
   }, []);
 
-  const testConnection = async () => {
+  const testConnection = async (overrideIp?: string) => {
     setIsConnecting(true);
     setLastError(null);
     setTestResult(null);
 
+    const targetIp = (overrideIp || gatewayIp).trim();
     const portNum = parseInt(gatewayPort, 10) || 80;
     gatewayClient.updateConfig({
-      host: gatewayIp.trim(),
+      host: targetIp,
       port: portNum,
     });
 
@@ -150,9 +151,49 @@ export default function ConnectGatewayScreen() {
           </View>
         </View>
 
+        {/* Quick Node Presets for Multi-Device Desk Testing */}
+        <Text style={[styles.label, { marginTop: 10, marginBottom: 6 }]}>Quick Node Presets (Unique Subnets):</Text>
+        <View style={styles.presetRow}>
+          <TouchableOpacity
+            style={[styles.presetPill, gatewayIp === '192.168.4.1' && styles.presetPillActive]}
+            onPress={() => {
+              setGatewayIp('192.168.4.1');
+              testConnection('192.168.4.1');
+            }}
+          >
+            <Text style={[styles.presetPillText, gatewayIp === '192.168.4.1' && styles.presetPillTextActive]}>
+              BOAT-001 (192.168.4.1)
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.presetPill, gatewayIp === '192.168.5.1' && styles.presetPillActive]}
+            onPress={() => {
+              setGatewayIp('192.168.5.1');
+              testConnection('192.168.5.1');
+            }}
+          >
+            <Text style={[styles.presetPillText, gatewayIp === '192.168.5.1' && styles.presetPillTextActive]}>
+              BOAT-104 (192.168.5.1)
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.presetPill, gatewayIp === '192.168.6.1' && styles.presetPillActive]}
+            onPress={() => {
+              setGatewayIp('192.168.6.1');
+              testConnection('192.168.6.1');
+            }}
+          >
+            <Text style={[styles.presetPillText, gatewayIp === '192.168.6.1' && styles.presetPillTextActive]}>
+              SHORE (192.168.6.1)
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={styles.primaryBtn}
-          onPress={testConnection}
+          onPress={() => testConnection()}
           disabled={isConnecting}
           activeOpacity={0.8}
         >
@@ -353,6 +394,34 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
+    marginTop: 10,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
+  },
+  presetPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  presetPillActive: {
+    backgroundColor: '#D1FAE5',
+    borderColor: '#10B981',
+  },
+  presetPillText: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  presetPillTextActive: {
+    color: '#065F46',
+    fontWeight: '800',
   },
   primaryBtnText: {
     color: '#FFFFFF',

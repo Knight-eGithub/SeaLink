@@ -10,10 +10,13 @@
 // Set to false on ESP32s deployed on boats
 #define IS_SHORE_GATEWAY false
 
+// Set Vessel ID (e.g. "BOAT-001" for Vessel 1, "BOAT-104" for Vessel 2)
+#define THIS_BOAT_ID "BOAT-001"
+
 RadioDriver radio;
 RouteTable routes;
 SensorManager sensors;
-GatewayServer gateway(radio, routes, IS_SHORE_GATEWAY ? "SHORE-BASE" : "BOAT-001");
+GatewayServer gateway(radio, routes, IS_SHORE_GATEWAY ? "SHORE-BASE" : THIS_BOAT_ID);
 
 void setup() {
     Serial.begin(115200);
@@ -55,9 +58,8 @@ void setup() {
         }
     }
 
-    // 3. Start local SoftAP for crew or base operator phones
-    const char* apSsid = IS_SHORE_GATEWAY ? "SOS-Shore-Base" : "SOS-LoRa";
-    gateway.begin(apSsid, "maritime123");
+    // 3. Start local SoftAP for crew or base operator phones (SSID and IP auto-derived from boat ID)
+    gateway.begin(nullptr, "maritime123");
 
     Serial.printf("[READY] %s listening for 433 MHz LoRa radio traffic.\n",
                   IS_SHORE_GATEWAY ? "Shore Station" : "Boat Gateway");
