@@ -1,6 +1,7 @@
 #include "GatewayServer.h"
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include "../web/WebUI.h"
 
 GatewayServer::GatewayServer(RadioDriver& radio, RouteTable& routes, const char* boatId)
     : _radio(radio),
@@ -80,6 +81,11 @@ void GatewayServer::setupRoutes() {
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    // Serve Embedded 100% Offline SeaLink Web Dashboard at root "/"
+    _server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+        request->send_P(200, "text/html", INDEX_HTML);
+    });
 
     _server.onNotFound([](AsyncWebServerRequest* request) {
         if (request->method() == HTTP_OPTIONS) {
