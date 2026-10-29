@@ -77,7 +77,7 @@ export default function ConnectGatewayScreen() {
     try {
       const resp = await gatewayClient.sendMessage({
         id: `ping_${Date.now()}`,
-        destinationBoatId: 'BOAT-104',
+        destinationBoatId: 'ALL',
         senderUserId: 'CREW-01',
         recipientUserId: '*',
         senderName: 'Gateway Ping',

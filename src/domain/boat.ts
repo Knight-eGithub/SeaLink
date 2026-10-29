@@ -22,6 +22,16 @@ export interface Boat {
 
 export const INITIAL_KNOWN_BOATS: Boat[] = [
   {
+    id: 'ALL',
+    name: 'All Vessels (LoRa Broadcast)',
+    callSign: 'LORA-ALL',
+    color: '#0284C7',
+    lastSeen: Date.now(),
+    hopCount: 1,
+    linkType: 'direct',
+    isBroadcast: true,
+  },
+  {
     id: 'ONBOARD-CREW',
     name: 'Onboard Crew',
     callSign: 'LOCAL-WIFI',
