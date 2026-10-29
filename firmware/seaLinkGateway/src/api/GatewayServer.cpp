@@ -82,18 +82,17 @@ void GatewayServer::setupRoutes() {
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    // Serve Embedded 100% Offline SeaLink Web Dashboard at root "/"
-    _server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+    // Serve Embedded 100% Offline SeaLink Web Dashboard at root and captive portal paths
+    auto serveDashboard = [](AsyncWebServerRequest* request) {
         request->send_P(200, "text/html", INDEX_HTML);
-    });
-
-    _server.onNotFound([](AsyncWebServerRequest* request) {
-        if (request->method() == HTTP_OPTIONS) {
-            request->send(204);
-        } else {
-            request->send(404, "application/json", "{\"error\":\"Endpoint not found\"}");
-        }
-    });
+    };
+    _server.on("/", HTTP_GET, serveDashboard);
+    _server.on("/index.html", HTTP_GET, serveDashboard);
+    _server.on("/generate_204", HTTP_GET, serveDashboard);
+    _server.on("/gen_204", HTTP_GET, serveDashboard);
+    _server.on("/hotspot-detect.html", HTTP_GET, serveDashboard);
+    _server.on("/connecttest.txt", HTTP_GET, serveDashboard);
+    _server.on("/redirect", HTTP_GET, serveDashboard);
 
     // GET /api/v1/status
     _server.on("/api/v1/status", HTTP_GET, [this](AsyncWebServerRequest* request) {
@@ -343,6 +342,19 @@ void GatewayServer::setupRoutes() {
         String out;
         serializeJson(doc, out);
         request->send(200, "application/json", out);
+    });
+
+    // Catch-all: Options 204, API 404, or serve dashboard for any browser URL/captive portal
+    _server.onNotFound([](AsyncWebServerRequest* request) {
+        if (request->method() == HTTP_OPTIONS) {
+            request->send(204);
+            return;
+        }
+        if (request->url().startsWith("/api/")) {
+            request->send(404, "application/json", "{\"error\":\"Endpoint not found\"}");
+            return;
+        }
+        request->send_P(200, "text/html", INDEX_HTML);
     });
 }
 
