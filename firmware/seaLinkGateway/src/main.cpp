@@ -6,12 +6,17 @@
 #include "config/CloudConfig.h"
 #include "sensors/SensorManager.h"
 
-// Set to true on the ESP32 acting as the Coastal Shore Station (Cloud Bridge)
-// Set to false on ESP32s deployed on boats
-#define IS_SHORE_GATEWAY false
+// ==============================================================================
+// CONFIGURE THIS ESP32 NODE HERE (Change these 2 lines before uploading):
+// ------------------------------------------------------------------------------
+// Node 1:  #define THIS_BOAT_ID "BOAT-001"   |   #define THIS_WIFI_IP "192.168.4.1"
+// Node 2:  #define THIS_BOAT_ID "BOAT-104"   |   #define THIS_WIFI_IP "192.168.5.1"
+// Node 3:  #define THIS_BOAT_ID "BOAT-207"   |   #define THIS_WIFI_IP "192.168.6.1"
+// ==============================================================================
+#define THIS_BOAT_ID   "BOAT-001"
+#define THIS_WIFI_IP   "192.168.4.1"
 
-// Set Vessel ID: change to "BOAT-001" for Boat 1, or "BOAT-104" for Boat 2
-#define THIS_BOAT_ID "BOAT-104"
+#define IS_SHORE_GATEWAY false
 
 RadioDriver radio;
 RouteTable routes;
@@ -67,9 +72,9 @@ void setup() {
         }
     }
 
-    // 3. Start local SoftAP for crew or base operator phones (SSID and IP auto-derived from boat ID)
+    // 3. Start local SoftAP using configured Boat ID and IP address
     Serial.println("[Setup Step 3/3] Launching Local Wi-Fi Access Point and Web Server...");
-    gateway.begin(nullptr, "maritime123");
+    gateway.begin(THIS_BOAT_ID, THIS_WIFI_IP, "maritime123");
 
     Serial.printf("[READY] %s listening for 433 MHz LoRa radio traffic.\n",
                   IS_SHORE_GATEWAY ? "Shore Station" : "Boat Gateway");

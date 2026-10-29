@@ -20,7 +20,7 @@ public:
         }
     }
     void setSensors(SensorManager* sensors) { _sensors = sensors; }
-    void begin(const char* apSsid = "SOS-LoRa", const char* apPassword = "maritime123");
+    void begin(const char* boatId = "BOAT-001", const char* gatewayIp = "192.168.4.1", const char* apPassword = "maritime123");
     void loop();
     void enqueueIncomingPacket(const PacketEnvelope& packet);
     uint32_t getPacketsSent() const { return _packetsSent; }

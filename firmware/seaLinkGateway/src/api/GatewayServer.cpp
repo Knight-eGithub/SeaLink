@@ -48,51 +48,33 @@ void GatewayServer::setShoreStationMode(bool isShore,
     }
 }
 
-void GatewayServer::begin(const char* customSsid, const char* apPassword) {
-    // If AUTO mode is requested, derive unique Vessel ID from ESP32 hardware MAC:
-    if (strcmp(_boatId, "AUTO") == 0 || strlen(_boatId) == 0) {
-        uint8_t mac[6];
-        WiFi.macAddress(mac);
-        snprintf(_boatId, sizeof(_boatId), "BOAT-%02X%02X", mac[4], mac[5]);
+void GatewayServer::begin(const char* boatId, const char* gatewayIp, const char* apPassword) {
+    if (boatId && strlen(boatId) > 0) {
+        strncpy(_boatId, boatId, sizeof(_boatId));
     }
 
     char finalSsid[32];
-    if (customSsid && strlen(customSsid) > 0) {
-        strncpy(finalSsid, customSsid, sizeof(finalSsid));
-    } else {
-        snprintf(finalSsid, sizeof(finalSsid), "SeaLink-%s", _boatId);
-    }
+    snprintf(finalSsid, sizeof(finalSsid), "SeaLink-%s", _boatId);
 
-    // Assign distinct IP subnet per vessel to eliminate multi-device IP clashes on your desk:
-    // - BOAT-001   -> 192.168.4.1 (Subnet 4)
-    // - BOAT-104   -> 192.168.5.1 (Subnet 5)
-    // - SHORE-BASE -> 192.168.6.1 (Subnet 6)
-    // - AUTO       -> 192.168.(4 + hash).1
-    uint8_t subnet = 4;
-    if (strstr(_boatId, "104") || strstr(_boatId, "02") || strstr(_boatId, "207") || strstr(_boatId, "BRAVO")) {
-        subnet = 5;
-    } else if (_isShoreNode || strstr(_boatId, "SHORE")) {
-        subnet = 6;
-    } else if (strncmp(_boatId, "BOAT-", 5) == 0 && strcmp(_boatId, "BOAT-001") != 0) {
-        // Any auto-generated or distinct boat ID gets an automatic separate subnet
-        uint8_t hash = 0;
-        for (size_t i = 0; i < strlen(_boatId); i++) hash += (uint8_t)_boatId[i];
-        subnet = 5 + (hash % 5); // Subnets 5, 6, 7, 8, 9
+    IPAddress local_IP(192, 168, 4, 1);
+    if (gatewayIp && strlen(gatewayIp) > 0) {
+        local_IP.fromString(gatewayIp);
     }
 
     WiFi.mode(WIFI_AP_STA); // AP for crew phones, STA for Shore Station internet uplink
-    IPAddress local_IP(192, 168, subnet, 1);
-    IPAddress gateway(192, 168, subnet, 1);
     IPAddress subnet_mask(255, 255, 255, 0);
-    WiFi.softAPConfig(local_IP, gateway, subnet_mask);
+    WiFi.softAPConfig(local_IP, local_IP, subnet_mask);
     WiFi.softAP(finalSsid, apPassword, 1, 0, 8); // Support up to 8 simultaneous crew devices on board
 
     IPAddress ip = WiFi.softAPIP();
-    Serial.printf("[Wi-Fi AP] Started SSID: '%s', IP: %s (Subnet: 192.168.%u.x)\n",
-                  finalSsid, ip.toString().c_str(), subnet);
+    Serial.printf("[Wi-Fi AP] Started SSID: '%s', IP: %s\n",
+                  finalSsid, ip.toString().c_str());
 
     setupRoutes();
     _server.begin();
+    Serial.printf("[HTTP Server] SeaLink REST API listening on port 80 (Node: %s, ShoreMode: %s)\n",
+                  _boatId, _isShoreNode ? "YES" : "NO");
+}
     Serial.printf("[HTTP Server] SeaLink REST API listening on port 80 (Node: %s, ShoreMode: %s)\n",
                   _boatId, _isShoreNode ? "YES" : "NO");
 }
