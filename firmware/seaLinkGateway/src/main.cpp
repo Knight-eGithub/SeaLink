@@ -6,14 +6,12 @@
 #include "config/CloudConfig.h"
 #include "sensors/SensorManager.h"
 
-// Predefined via platformio.ini build_flags (-e boat1, -e boat2, -e shore)
-#ifndef IS_SHORE_GATEWAY
+// Set to true on the ESP32 acting as the Coastal Shore Station (Cloud Bridge)
+// Set to false on ESP32s deployed on boats
 #define IS_SHORE_GATEWAY false
-#endif
 
-#ifndef THIS_BOAT_ID
-#define THIS_BOAT_ID "BOAT-001"
-#endif
+// Set Vessel ID: change to "BOAT-001" for Boat 1, or "BOAT-104" for Boat 2
+#define THIS_BOAT_ID "BOAT-104"
 
 RadioDriver radio;
 RouteTable routes;
@@ -23,9 +21,14 @@ GatewayServer gateway(radio, routes, IS_SHORE_GATEWAY ? "SHORE-BASE" : THIS_BOAT
 void setup() {
     Serial.begin(115200);
     delay(1000);
+
+    // Enforce active Vessel ID
+    gateway.setBoatId(IS_SHORE_GATEWAY ? "SHORE-BASE" : THIS_BOAT_ID);
+
     Serial.println("\n==============================================");
     Serial.println("  SeaLink Maritime LoRa Gateway with SOS Mesh");
-    Serial.printf("  Node Type: %s\n", IS_SHORE_GATEWAY ? "COASTAL SHORE STATION (SUPABASE BRIDGE)" : "VESSEL GATEWAY");
+    Serial.printf("  Node Type : %s\n", IS_SHORE_GATEWAY ? "COASTAL SHORE STATION (SUPABASE BRIDGE)" : "VESSEL GATEWAY");
+    Serial.printf("  Vessel ID : %s\n", IS_SHORE_GATEWAY ? "SHORE-BASE" : THIS_BOAT_ID);
     Serial.println("==============================================");
 
     // 1. Initialize Onboard Hardware Sensors (GPS, MQ-135 Gas, MPU6050, OLED)

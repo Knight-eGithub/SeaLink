@@ -14,6 +14,11 @@
 class GatewayServer {
 public:
     GatewayServer(RadioDriver& radio, RouteTable& routes, const char* boatId = "BOAT-001");
+    void setBoatId(const char* id) {
+        if (id && strlen(id) > 0) {
+            strncpy(_boatId, id, sizeof(_boatId));
+        }
+    }
     void setSensors(SensorManager* sensors) { _sensors = sensors; }
     void begin(const char* apSsid = "SOS-LoRa", const char* apPassword = "maritime123");
     void loop();
