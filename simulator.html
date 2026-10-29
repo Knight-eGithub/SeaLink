@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SeaLink - Maritime LoRa Mesh Simulator</title>
+<style>
+:root {
+  --bg: #090e17;
+  --bg-card: #131c2e;
+  --bg-card-hover: #1a2740;
+  --primary: #0ea5e9;
+  --primary-hover: #0284c7;
+  --teal: #14b8a6;
+  --danger: #ef4444;
+  --danger-glow: rgba(239, 68, 68, 0.4);
+  --warning: #f59e0b;
+  --success: #10b981;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #233554;
+  --border-light: #334b75;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+/* Top Navigation Bar */
+header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 24px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.brand-title { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: #fff; display: flex; align-items: center; gap: 8px; }
+.sim-badge { background: linear-gradient(135deg, #0ea5e9, #14b8a6); color: #fff; font-size: 10px; font-weight: 900; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Perspective Selector */
+.node-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+.node-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.node-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+}
+.node-btn:hover:not(.active) { color: white; background: var(--bg-card); }
+
+/* Navigation Tabs (Routes) */
+.routes-nav {
+  display: flex;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  gap: 4px;
+  overflow-x: auto;
+}
+.route-tab {
+  padding: 12px 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.route-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: rgba(14, 165, 233, 0.05);
+}
+.route-tab:hover:not(.active) { color: var(--text); }
+
+/* Global Emergency Banner */
+.sos-banner {
+  display: none;
+  background: linear-gradient(90deg, #b91c1c, #ef4444, #b91c1c);
+  background-size: 200% 100%;
+  animation: alarmPulse 1.5s infinite;
+  color: white;
+  padding: 10px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 4px 15px var(--danger-glow);
+}
+@keyframes alarmPulse { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+/* Main Content Area */
+main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 18px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.view-section { display: none; }
+.view-section.active { display: flex; flex-direction: column; gap: 18px; animation: fadeIn 0.25s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.card-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+
+/* Grid Layouts */
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+
+/* Telemetry Widgets */
+.telem-box { display: flex; flex-direction: column; gap: 6px; }
+.telem-value { font-size: 20px; font-weight: 800; color: #fff; }
+.telem-sub { font-size: 12px; color: var(--text-muted); }
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+.status-online { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+.status-hazard { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.5); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.4; } }
+
+/* Chat Container */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 440px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  position: relative;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.msg-out {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+.msg-in {
+  align-self: flex-start;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-bottom-left-radius: 2px;
+}
+.msg-sos {
+  align-self: center;
+  width: 95%;
+  background: rgba(239, 68, 68, 0.2);
+  border: 2px solid var(--danger);
+  color: #fecaca;
+  text-align: center;
+  font-weight: 700;
+  animation: shake 0.4s ease-in-out;
+}
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+
+.msg-meta {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-input-bar {
+  padding: 12px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.chat-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+.chat-input:focus { border-color: var(--primary); }
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+.btn-danger { background: var(--danger); color: white; box-shadow: 0 4px 12px var(--danger-glow); }
+.btn-danger:hover { background: #dc2626; transform: scale(1.02); }
+
+/* Interactive Simulator Hardware Controls */
+.sim-controls-card {
+  background: linear-gradient(180deg, #131c2e, #0e1524);
+  border: 1px solid var(--border-light);
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.control-row:last-child { border-bottom: none; }
+.control-label { font-size: 13px; font-weight: 700; color: #cbd5e1; }
+.control-sub { font-size: 11px; color: var(--text-muted); }
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #334155; transition: .3s; border-radius: 24px;
+}
+.slider:before {
+  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background-color: white; transition: .3s; border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--danger); }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* Mesh Topology Canvas */
+#mesh-canvas {
+  width: 100%;
+  height: 380px;
+  background: #060a11;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+/* API Tester */
+.api-endpoint-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.api-header {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: var(--bg-card);
+}
+.api-method {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.api-get { background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); }
+.api-post { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+.api-path { font-family: monospace; font-size: 13px; font-weight: 700; color: #fff; margin-left: 10px; }
+.api-body { padding: 12px; display: none; background: #070c14; border-top: 1px solid var(--border); }
+.api-json { font-family: monospace; font-size: 12px; color: #38bdf8; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="brand">
+    <span class="brand-icon">🌊</span>
+    <div>
+      <div class="brand-title">
+        SeaLink Maritime
+        <span class="sim-badge">Interactive Simulator</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perspective Node Switcher -->
+  <div class="node-switcher">
+    <button class="node-btn active" id="btn-node-boat1" onclick="switchNode('BOAT-001')">
+      ⛵ BOAT-001 (Alpha)
+    </button>
+    <button class="node-btn" id="btn-node-boat2" onclick="switchNode('BOAT-104')">
+      🛥️ BOAT-104 (Relay)
+    </button>
+    <button class="node-btn" id="btn-node-shore" onclick="switchNode('SHORE-001')">
+      🗼 SHORE-001 (Port)
+    </button>
+  </div>
+</header>
+
+<!-- Emergency SOS Mesh Banner -->
+<div class="sos-banner" id="global-sos-banner">
+  🚨 DISTRESS FLOOD BROADCAST DETECTED: <span id="sos-vessel-text">BOAT-001</span> IN EMERGENCY! MESH RELAYING TO SHORE...
+</div>
+
+<!-- Route Navigation -->
+<nav class="routes-nav">
+  <button class="route-tab active" onclick="switchRoute('dashboard')">📊 Dashboard (/)</button>
+  <button class="route-tab" onclick="switchRoute('chat')">💬 LoRa Chat (/chat)</button>
+  <button class="route-tab" onclick="switchRoute('mesh')">🌐 Mesh Topology (/mesh)</button>
+  <button class="route-tab" onclick="switchRoute('sensors')">🎛️ Sensor Sim (/sensors)</button>
+  <button class="route-tab" onclick="switchRoute('api')">🔌 REST API Explorer (/api)</button>
+</nav>
+
+<main>
+
+  <!-- ==================== ROUTE 1: DASHBOARD ==================== -->
+  <section class="view-section active" id="route-dashboard">
+    <!-- Node Status Hero -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span id="dash-node-icon">⛵</span>
+          <span id="dash-node-name">BOAT-001 (SeaLink Alpha)</span>
+        </div>
+        <div class="status-indicator status-online" id="dash-radio-badge">
+          ● 433 MHz LoRa Ready
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="telem-box">
+          <span class="telem-sub">Node Identity</span>
+          <span class="telem-value" id="dash-identity">BOAT-001</span>
+          <span class="telem-sub" id="dash-ip">Gateway IP: 192.168.4.1</span>
+        </div>
+        <div class="telem-box">
+          <span class="telem-sub">Mesh Role</span>
+          <span class="telem-value" id="dash-role" style="color: var(--teal);">Vessel Gateway</span>
+          <span class="telem-sub" id="dash-hops">Max Mesh Hops: 4</span>
+        </div>
+        <div class="telem-box">
+          <span class="telem-sub">Cloud Uplink</span>
+          <span class="telem-value" id="dash-cloud" style="color: var(--warning);">Offline P2P</span>
+          <span class="telem-sub" id="dash-cloud-sub">Relays via Shore to Supabase</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Grid -->
+    <div class="grid-3">
+      <!-- GPS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🛰️ NEO-6M GPS</div>
+          <span class="status-indicator status-online" id="gps-status-pill">FIX ACQUIRED</span>
+        </div>
+        <div class="telem-value" id="dash-gps-coords">12.8714° N, 74.8422° E</div>
+        <div class="telem-sub" style="margin-top:6px;" id="dash-gps-meta">Speed: 14.2 knots | 9 Sats | Off Mangalore</div>
+      </div>
+
+      <!-- MQ-135 Gas -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">💨 MQ-135 Gas Sensor</div>
+          <span class="status-indicator status-online" id="dash-gas-pill">NORMAL</span>
+        </div>
+        <div class="telem-value" id="dash-gas-text" style="color: var(--success);">Clean Air</div>
+        <div class="telem-sub" style="margin-top:6px;" id="dash-gas-sub">Digital DO: Low | Carbon Monoxide Safe</div>
+      </div>
+
+      <!-- MPU6050 Motion -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📐 MPU6050 Motion</div>
+          <span class="status-indicator status-online" id="dash-motion-pill">STABLE</span>
+        </div>
+        <div class="telem-value" id="dash-motion-text">Pitch: 2° | Roll: 4°</div>
+        <div class="telem-sub" style="margin-top:6px;" id="dash-motion-sub">Total Accel: 1.01 G | Vessel Upright</div>
+      </div>
+    </div>
+
+    <!-- Quick Action Emergency -->
+    <div class="card" style="border-color: rgba(239,68,68,0.4); background: linear-gradient(180deg, #1f141f, #131c2e);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <div style="font-size: 16px; font-weight: 800; color: #fca5a5;">🚨 Emergency SOS Distress Mesh Flooding</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+            Transmits high-priority distress packets with GPS coordinates across all hops to shore.
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="triggerSos()">
+          TRIGGER SOS DISTRESS
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ROUTE 2: CHAT ==================== -->
+  <section class="view-section" id="route-chat">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">💬 433 MHz LoRa Real-Time Chat</div>
+        <div style="font-size: 12px; color: var(--text-muted);">
+          Currently sending as: <strong id="chat-sender-id" style="color:var(--primary);">BOAT-001</strong>
+        </div>
+      </div>
+
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-msg-box">
+          <div class="msg-bubble msg-in">
+            <div>Welcome to SeaLink offline LoRa radio mesh. Packets relay peer-to-peer without cellular tower.</div>
+            <div class="msg-meta">
+              <span>SYSTEM</span>
+              <span>Online</span>
+            </div>
+          </div>
+        </div>
+
+        <form class="chat-input-bar" onsubmit="handleSendSubmit(event)">
+          <select class="chat-select" id="chat-dest-select">
+            <option value="ALL">📢 Broadcast to ALL</option>
+            <option value="BOAT-001">⛵ BOAT-001 (Alpha)</option>
+            <option value="BOAT-104">🛥️ BOAT-104 (Relay)</option>
+            <option value="SHORE-001">🗼 SHORE-001 (Shore)</option>
+          </select>
+          <input type="text" class="chat-input" id="chat-text-input" placeholder="Type message over 433 MHz LoRa radio..." required>
+          <button type="submit" class="btn btn-primary">Send LoRa 🚀</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ROUTE 3: MESH TOPOLOGY ==================== -->
+  <section class="view-section" id="route-mesh">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🌐 Live LoRa Mesh Network Topology (Mangalore Offshore)</div>
+        <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="simulateBeaconPing()">
+          Ping Mesh Discovery
+        </button>
+      </div>
+      <canvas id="mesh-canvas"></canvas>
+      <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 12px;">
+        <div style="padding: 8px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);">
+          <strong>⛵ BOAT-001 (Alpha):</strong> Deep Sea (18 km offshore)
+        </div>
+        <div style="padding: 8px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);">
+          <strong>🛥️ BOAT-104 (Relay):</strong> Mid-Sea Relay (9 km offshore)
+        </div>
+        <div style="padding: 8px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);">
+          <strong>🗼 SHORE-001:</strong> Port Coast Guard Station (0 km)
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ROUTE 4: HARDWARE SENSOR SIMULATOR ==================== -->
+  <section class="view-section" id="route-sensors">
+    <div class="card sim-controls-card">
+      <div class="card-header">
+        <div class="card-title">🎛️ Hardware Sensor Simulation Controls</div>
+        <span style="font-size: 11px; color: var(--teal); font-weight: 700;">Active Node: <span id="sim-active-node">BOAT-001</span></span>
+      </div>
+
+      <!-- Gas Trigger -->
+      <div class="control-row">
+        <div>
+          <div class="control-label">MQ-135 Gas Hazard Injection</div>
+          <div class="control-sub">Simulate toxic smoke/combustible gas leak in boat cabin</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="sim-gas-toggle" onchange="toggleSimGas(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Capsizing Motion Trigger -->
+      <div class="control-row">
+        <div>
+          <div class="control-label">Capsizing Roll Simulation (&gt; 45° Tilt)</div>
+          <div class="control-sub">Simulate heavy waves inducing dangerous vessel list</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="sim-tilt-toggle" onchange="toggleSimTilt(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- GPS Drift -->
+      <div class="control-row">
+        <div>
+          <div class="control-label">GPS Off-Shore Drift Speed</div>
+          <div class="control-sub">Simulates boat moving along navigation corridor</div>
+        </div>
+        <input type="range" min="0" max="30" value="14" style="width: 150px; accent-color: var(--primary);" id="sim-speed-slider" oninput="updateSimSpeed(this.value)">
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ROUTE 5: REST API EXPLORER ==================== -->
+  <section class="view-section" id="route-api">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔌 Embedded ESP32 REST API Explorer</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Matches SeaLink Firmware Endpoints</span>
+      </div>
+
+      <!-- GET /api/v1/status -->
+      <div class="api-endpoint-card">
+        <div class="api-header" onclick="toggleApi('api-status-body')">
+          <div>
+            <span class="api-method api-get">GET</span>
+            <span class="api-path">/api/v1/status</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">Gateway health & telemetry</span>
+        </div>
+        <div class="api-body" id="api-status-body">
+          <div class="api-json" id="api-status-json"></div>
+        </div>
+      </div>
+
+      <!-- GET /api/v1/telemetry -->
+      <div class="api-endpoint-card">
+        <div class="api-header" onclick="toggleApi('api-telem-body')">
+          <div>
+            <span class="api-method api-get">GET</span>
+            <span class="api-path">/api/v1/telemetry</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">Live GPS, Gas & Motion</span>
+        </div>
+        <div class="api-body" id="api-telem-body">
+          <div class="api-json" id="api-telem-json"></div>
+        </div>
+      </div>
+
+      <!-- GET /api/v1/messages -->
+      <div class="api-endpoint-card">
+        <div class="api-header" onclick="toggleApi('api-msg-body')">
+          <div>
+            <span class="api-method api-get">GET</span>
+            <span class="api-path">/api/v1/messages?cursor=0</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">LoRa message queue polling</span>
+        </div>
+        <div class="api-body" id="api-msg-body">
+          <div class="api-json" id="api-msg-json"></div>
+        </div>
+      </div>
+
+      <!-- POST /api/v1/messages -->
+      <div class="api-endpoint-card">
+        <div class="api-header" onclick="toggleApi('api-post-body')">
+          <div>
+            <span class="api-method api-post">POST</span>
+            <span class="api-path">/api/v1/messages</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">Transmit packet over RF</span>
+        </div>
+        <div class="api-body" id="api-post-body">
+          <div class="api-json">{
+  "id": "msg_sim_921",
+  "destinationBoatId": "ALL",
+  "senderUserId": "CREW-01",
+  "senderName": "Alpha",
+  "text": "Weather alert: swell rising to 2.5m"
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ==================== STATE MANAGEMENT ====================
+let currentNode = 'BOAT-001';
+let currentRoute = 'dashboard';
+let isSosActive = false;
+
+const nodes = {
+  'BOAT-001': {
+    name: 'BOAT-001 (Alpha)',
+    icon: '⛵',
+    role: 'Vessel Gateway',
+    ip: '192.168.4.1',
+    isShore: false,
+    gps: { lat: 12.8714, lon: 74.8422, speed: 14.2, sats: 9, hasFix: true },
+    gas: { hazard: false, value: 0 },
+    motion: { pitch: 2.1, roll: 4.3, accelG: 1.01, capsizing: false }
+  },
+  'BOAT-104': {
+    name: 'BOAT-104 (Relay)',
+    icon: '🛥️',
+    role: 'Mid-Sea Relay Node',
+    ip: '192.168.5.1',
+    isShore: false,
+    gps: { lat: 12.8950, lon: 74.8550, speed: 8.5, sats: 10, hasFix: true },
+    gas: { hazard: false, value: 0 },
+    motion: { pitch: 1.4, roll: 2.8, accelG: 0.99, capsizing: false }
+  },
+  'SHORE-001': {
+    name: 'SHORE-001 (Port Base)',
+    icon: '🗼',
+    role: 'Shore Internet Gateway',
+    ip: '192.168.6.1',
+    isShore: true,
+    gps: { lat: 12.9141, lon: 74.8560, speed: 0.0, sats: 12, hasFix: true },
+    gas: { hazard: false, value: 0 },
+    motion: { pitch: 0.0, roll: 0.0, accelG: 1.00, capsizing: false }
+  }
+};
+
+const messageStore = [];
+
+// ==================== ROUTING ====================
+function switchRoute(routeId) {
+  currentRoute = routeId;
+  document.querySelectorAll('.route-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+
+  event.currentTarget.classList.add('active');
+  const target = document.getElementById('route-' + routeId);
+  if (target) target.classList.add('active');
+
+  if (routeId === 'mesh') drawMeshNetwork();
+  if (routeId === 'api') updateApiExplorer();
+}
+
+// ==================== NODE SWITCHING ====================
+function switchNode(nodeId) {
+  currentNode = nodeId;
+  document.querySelectorAll('.node-btn').forEach(b => b.classList.remove('active'));
+  if (nodeId === 'BOAT-001') document.getElementById('btn-node-boat1').classList.add('active');
+  if (nodeId === 'BOAT-104') document.getElementById('btn-node-boat2').classList.add('active');
+  if (nodeId === 'SHORE-001') document.getElementById('btn-node-shore').classList.add('active');
+
+  const node = nodes[nodeId];
+  document.getElementById('dash-node-icon').innerText = node.icon;
+  document.getElementById('dash-node-name').innerText = node.name;
+  document.getElementById('dash-identity').innerText = nodeId;
+  document.getElementById('dash-ip').innerText = 'Gateway IP: ' + node.ip;
+  document.getElementById('dash-role').innerText = node.role;
+  document.getElementById('chat-sender-id').innerText = nodeId;
+  document.getElementById('sim-active-node').innerText = nodeId;
+
+  // Cloud status
+  if (node.isShore) {
+    document.getElementById('dash-cloud').innerText = 'Online Supabase';
+    document.getElementById('dash-cloud').style.color = 'var(--success)';
+    document.getElementById('dash-cloud-sub').innerText = 'Syncing SOS packets to Cloud DB';
+  } else {
+    document.getElementById('dash-cloud').innerText = 'Offline P2P';
+    document.getElementById('dash-cloud').style.color = 'var(--warning)';
+    document.getElementById('dash-cloud-sub').innerText = 'Relays via Shore to Supabase';
+  }
+
+  // Update sensor controls state
+  document.getElementById('sim-gas-toggle').checked = node.gas.hazard;
+  document.getElementById('sim-tilt-toggle').checked = node.motion.capsizing;
+
+  updateDashboardUI();
+  updateApiExplorer();
+}
+
+// ==================== DASHBOARD UPDATE ====================
+function updateDashboardUI() {
+  const node = nodes[currentNode];
+
+  // GPS
+  document.getElementById('dash-gps-coords').innerText = node.gps.lat.toFixed(4) + '° N, ' + node.gps.lon.toFixed(4) + '° E';
+  document.getElementById('dash-gps-meta').innerText = 'Speed: ' + node.gps.speed.toFixed(1) + ' kn | ' + node.gps.sats + ' Sats | Mangalore Grid';
+
+  // Gas
+  const gasPill = document.getElementById('dash-gas-pill');
+  const gasText = document.getElementById('dash-gas-text');
+  const gasSub = document.getElementById('dash-gas-sub');
+  if (node.gas.hazard) {
+    gasPill.className = 'status-indicator status-hazard';
+    gasPill.innerText = 'HAZARD!';
+    gasText.innerText = '⚠️ TOXIC GAS DETECTED';
+    gasText.style.color = 'var(--danger)';
+    gasSub.innerText = 'Digital Pin: HIGH | Immediate Cabin Evacuation';
+  } else {
+    gasPill.className = 'status-indicator status-online';
+    gasPill.innerText = 'NORMAL';
+    gasText.innerText = 'Clean Air (Safe)';
+    gasText.style.color = 'var(--success)';
+    gasSub.innerText = 'Digital Pin: LOW | Carbon Monoxide Safe';
+  }
+
+  // Motion
+  const motPill = document.getElementById('dash-motion-pill');
+  const motText = document.getElementById('dash-motion-text');
+  const motSub = document.getElementById('dash-motion-sub');
+  if (node.motion.capsizing) {
+    motPill.className = 'status-indicator status-hazard';
+    motPill.innerText = 'CAPSIZING!';
+    motText.innerText = 'Pitch: ' + node.motion.pitch.toFixed(0) + '° | Roll: ' + node.motion.roll.toFixed(0) + '°';
+    motText.style.color = 'var(--danger)';
+    motSub.innerText = '⚠️ CRITICAL ANGLE EXCEEDED (> 45°)';
+  } else {
+    motPill.className = 'status-indicator status-online';
+    motPill.innerText = 'STABLE';
+    motText.innerText = 'Pitch: ' + node.motion.pitch.toFixed(1) + '° | Roll: ' + node.motion.roll.toFixed(1) + '°';
+    motText.style.color = 'white';
+    motSub.innerText = 'Total Accel: ' + node.motion.accelG.toFixed(2) + ' G | Upright';
+  }
+}
+
+// ==================== HARDWARE SIMULATOR CONTROLS ====================
+function toggleSimGas(isHazard) {
+  nodes[currentNode].gas.hazard = isHazard;
+  updateDashboardUI();
+  updateApiExplorer();
+
+  if (isHazard) {
+    broadcastSystemAlert('🚨 GAS SENSOR ALARM on ' + currentNode + '! Hazardous gas detected in cabin.');
+  }
+}
+
+function toggleSimTilt(isCapsizing) {
+  nodes[currentNode].motion.capsizing = isCapsizing;
+  if (isCapsizing) {
+    nodes[currentNode].motion.roll = 52.0;
+    nodes[currentNode].motion.pitch = 28.0;
+    broadcastSystemAlert('⚠️ VESSEL CAPSIZING ALERT on ' + currentNode + '! Extreme list angle detected (52° Roll).');
+  } else {
+    nodes[currentNode].motion.roll = 4.3;
+    nodes[currentNode].motion.pitch = 2.1;
+  }
+  updateDashboardUI();
+  updateApiExplorer();
+}
+
+function updateSimSpeed(val) {
+  nodes[currentNode].gps.speed = parseFloat(val);
+  updateDashboardUI();
+}
+
+function broadcastSystemAlert(alertText) {
+  const msgObj = {
+    id: 'alert_' + Date.now(),
+    sourceBoatId: currentNode,
+    destinationBoatId: 'ALL',
+    senderName: 'SENSOR-TELEMETRY',
+    text: alertText,
+    isSos: true,
+    hopCount: 1,
+    rssi: -65,
+    timestamp: new Date().toLocaleTimeString()
+  };
+  messageStore.push(msgObj);
+  renderChatMessages();
+}
+
+// ==================== CHAT & LORA TRANSMISSION ====================
+function handleSendSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('chat-text-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const dest = document.getElementById('chat-dest-select').value;
+  input.value = '';
+
+  // Simulate LoRa Hop calculations
+  let hops = 1;
+  let rssi = -72;
+  if (currentNode === 'BOAT-001' && dest === 'SHORE-001') {
+    hops = 2; // Relays through BOAT-104
+    rssi = -89;
+  }
+
+  const msg = {
+    id: 'msg_' + Date.now(),
+    sourceBoatId: currentNode,
+    destinationBoatId: dest,
+    senderName: currentNode,
+    text: text,
+    isSos: false,
+    hopCount: hops,
+    rssi: rssi,
+    timestamp: new Date().toLocaleTimeString()
+  };
+
+  messageStore.push(msg);
+  renderChatMessages();
+  animatePacketOnMesh(msg);
+  updateApiExplorer();
+}
+
+function triggerSos() {
+  if (!confirm('🚨 BROADCAST 433 MHz SOS DISTRESS PACKET?\n\nThis will trigger maximum-range flood routing across all vessels to the Shore Station.')) return;
+
+  isSosActive = true;
+  document.getElementById('global-sos-banner').style.display = 'block';
+  document.getElementById('sos-vessel-text').innerText = currentNode;
+
+  const sosMsg = {
+    id: 'sos_' + Date.now(),
+    sourceBoatId: currentNode,
+    destinationBoatId: 'ALL',
+    senderName: currentNode + ' MAYDAY',
+    text: '🚨 MAYDAY MAYDAY MAYDAY - DISTRESS FLOOD - IMMEDIATE RESCUE REQUIRED (Pos: ' + nodes[currentNode].gps.lat.toFixed(4) + 'N, ' + nodes[currentNode].gps.lon.toFixed(4) + 'E)',
+    isSos: true,
+    hopCount: 1,
+    rssi: -54,
+    timestamp: new Date().toLocaleTimeString()
+  };
+
+  messageStore.push(sosMsg);
+  renderChatMessages();
+  animatePacketOnMesh(sosMsg);
+  updateApiExplorer();
+}
+
+function renderChatMessages() {
+  const box = document.getElementById('chat-msg-box');
+  box.innerHTML = '';
+
+  messageStore.forEach(m => {
+    const el = document.createElement('div');
+    const isOut = (m.sourceBoatId === currentNode && !m.isSos);
+
+    if (m.isSos) {
+      el.className = 'msg-bubble msg-sos';
+    } else if (isOut) {
+      el.className = 'msg-bubble msg-out';
+    } else {
+      el.className = 'msg-bubble msg-in';
+    }
+
+    let meta = (isOut ? 'To: ' + m.destinationBoatId : 'From: ' + m.sourceBoatId);
+    meta += ' | Hop: ' + m.hopCount + ' | ' + m.rssi + ' dBm';
+
+    el.innerHTML = '<div>' + escapeHtml(m.text) + '</div>' +
+                   '<div class="msg-meta"><span>' + meta + '</span><span>' + m.timestamp + '</span></div>';
+    box.appendChild(el);
+  });
+
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ==================== MESH CANVAS GRAPHICS ====================
+let animPacket = null;
+
+function drawMeshNetwork() {
+  const canvas = document.getElementById('mesh-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth - 36;
+  canvas.height = 360;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Node Positions
+  const p1 = { x: canvas.width * 0.18, y: canvas.height * 0.5, id: 'BOAT-001', name: 'BOAT-001 (Alpha)' };
+  const p2 = { x: canvas.width * 0.50, y: canvas.height * 0.4, id: 'BOAT-104', name: 'BOAT-104 (Relay)' };
+  const p3 = { x: canvas.width * 0.82, y: canvas.height * 0.6, id: 'SHORE-001', name: 'SHORE-001 (Port)' };
+
+  // Draw Radio Links
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#233554';
+  ctx.setLineDash([6, 6]);
+
+  // Link 1 -> 2
+  ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  // Link 2 -> 3
+  ctx.beginPath(); ctx.moveTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  // Draw Nodes
+  [p1, p2, p3].forEach(p => {
+    const isCur = (p.id === currentNode);
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, isCur ? 32 : 24, 0, Math.PI * 2);
+    ctx.fillStyle = isCur ? 'rgba(14, 165, 233, 0.25)' : 'rgba(30, 41, 59, 0.5)';
+    ctx.fill();
+
+    // Node Circle
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, isCur ? 22 : 16, 0, Math.PI * 2);
+    ctx.fillStyle = isCur ? '#0ea5e9' : '#1e293b';
+    ctx.strokeStyle = isCur ? '#38bdf8' : '#475569';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = isCur ? '#fff' : '#94a3b8';
+    ctx.font = isCur ? 'bold 12px sans-serif' : '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, p.x, p.y + 45);
+  });
+}
+
+function animatePacketOnMesh(pkt) {
+  if (currentRoute !== 'mesh') return;
+  drawMeshNetwork();
+}
+
+function simulateBeaconPing() {
+  broadcastSystemAlert('📡 LoRa Mesh Discovery Beacon received from nearby vessel BOAT-104 (RSSI: -68 dBm)');
+}
+
+// ==================== API EXPLORER ====================
+function toggleApi(id) {
+  const el = document.getElementById(id);
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+  updateApiExplorer();
+}
+
+function updateApiExplorer() {
+  const node = nodes[currentNode];
+
+  const statusDoc = {
+    boatId: currentNode,
+    boatName: node.name,
+    firmwareVersion: "1.2.0-mesh-sos",
+    wifiApStatus: "active",
+    ipAddress: node.ip,
+    loraStatus: "ready",
+    frequency: 433000000,
+    isShoreGateway: node.isShore,
+    cloudSyncAvailable: node.isShore,
+    telemetry: {
+      gps: node.gps,
+      gas: node.gas,
+      motion: node.motion
+    }
+  };
+
+  const telemDoc = {
+    boatId: currentNode,
+    timestamp: Date.now(),
+    gps: node.gps,
+    gas: node.gas,
+    motion: node.motion
+  };
+
+  const msgDoc = {
+    messages: messageStore,
+    totalPending: messageStore.length
+  };
+
+  const s = document.getElementById('api-status-json');
+  if (s) s.innerText = JSON.stringify(statusDoc, null, 2);
+
+  const t = document.getElementById('api-telem-json');
+  if (t) t.innerText = JSON.stringify(telemDoc, null, 2);
+
+  const m = document.getElementById('api-msg-json');
+  if (m) m.innerText = JSON.stringify(msgDoc, null, 2);
+}
+
+// Initial Run
+updateDashboardUI();
+updateApiExplorer();
+window.addEventListener('resize', () => { if (currentRoute === 'mesh') drawMeshNetwork(); });
+</script>
+</body>
+</html>
