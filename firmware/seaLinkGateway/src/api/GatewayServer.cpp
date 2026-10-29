@@ -75,9 +75,6 @@ void GatewayServer::begin(const char* boatId, const char* gatewayIp, const char*
     Serial.printf("[HTTP Server] SeaLink REST API listening on port 80 (Node: %s, ShoreMode: %s)\n",
                   _boatId, _isShoreNode ? "YES" : "NO");
 }
-    Serial.printf("[HTTP Server] SeaLink REST API listening on port 80 (Node: %s, ShoreMode: %s)\n",
-                  _boatId, _isShoreNode ? "YES" : "NO");
-}
 
 void GatewayServer::setupRoutes() {
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
